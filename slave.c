@@ -13,13 +13,16 @@
 #include "libs/common.h"
 #include "libs/stdnetwork.h"
 
-long long handle_scm_timestamping(struct scm_timestamping *ts) {
 
+
+long long handle_scm_timestamping(struct scm_timestamping *ts) {
   return ts->ts[0].tv_sec*1000000000+ts->ts[0].tv_nsec;
 }
- 
+
 long long handle_time(struct msghdr *msg) {
+
   long long timeT = 0;
+
   for (struct cmsghdr *cmsg = CMSG_FIRSTHDR(msg); cmsg;
        cmsg = CMSG_NXTHDR(msg, cmsg)) {
  
@@ -43,12 +46,13 @@ long long handle_time(struct msghdr *msg) {
       timeT = handle_scm_timestamping(ts);
     } break;
     default:
-      /* Ignore other cmsg options */
       break;
     }
   }
+
   return timeT;
 }
+
 
 long long udp_receive(int sock, char *buf, size_t len) {
   char ctrl[2048];
@@ -63,35 +67,32 @@ long long udp_receive(int sock, char *buf, size_t len) {
                                       .msg_namelen = sizeof infor,
                                       .msg_iov = &iov,
                                       .msg_iovlen = 1};
+                                  
   ssize_t recv_len = recvmsg(sock, &msg, 0);
- 
   if (recv_len < 0) {
     printf("Empty\n");
   }
- 
+
   long long timeT = handle_time(&msg);
- 
   return timeT;
 }
 
 
 long total_offset = 0;
-
 static void sync_clock(int times, int *sock, struct sockaddr_in *master) {
-    char useless_buffer[FIXED_BUFFER];
-    int i;
+  char useless_buffer[FIXED_BUFFER];
+  int i;
 	long time;
 	long min_delay,min_offset,min_ms,min_sm;
 	min_delay = 1000000000;
 	min_offset = 1000000000;
 	long delay, offset, ms, sm;
 	int time1[2];
-	get_time_real(time1);
-  send_packet(sock,"Running", FIXED_BUFFER, NULL, master);
-	
-  printf("Running IEEE1588 PTP...\n");
+  long t1[times],t2[times],t3[times],t4[times];
 
-	long t1[times],t2[times],t3[times],t4[times];
+	get_time_real(time1);
+  printf("Running IEEE1588 PTP...\n");
+  send_packet(sock,"Running", FIXED_BUFFER, NULL, master);
 
 	for(i = 0; i < times; i++) {
 		t2[i] = udp_receive(*sock, useless_buffer, FIXED_BUFFER);
@@ -99,17 +100,16 @@ static void sync_clock(int times, int *sock, struct sockaddr_in *master) {
 	}
 
   receive_packet(sock, useless_buffer, FIXED_BUFFER, NULL, NULL);
-
 	for(i = 0; i < times; i++) {
 		send_packet(sock,"delay", FIXED_BUFFER, NULL, master);
     get_time_real(time1);
     t3[i] = TO_NSEC(time1);
     receive_packet(sock, useless_buffer, FIXED_BUFFER, NULL, NULL);
 	}
+
   usleep(200);
 
   send_packet(sock,"Continue", FIXED_BUFFER, NULL, master);
-
 	for(i = 0; i < times; i++) {
 		receive_packet(sock, t1+i, sizeof(time), NULL, NULL);
     send_packet(sock,"OK", FIXED_BUFFER, NULL, master);
@@ -131,9 +131,7 @@ static void sync_clock(int times, int *sock, struct sockaddr_in *master) {
 			min_sm = sm;
 			min_ms = ms;
 		}
-	
 	}
-
 
     if(min_delay > 10000 && min_delay < 40000){
         if(abs(min_offset) > 20000){
@@ -145,44 +143,40 @@ static void sync_clock(int times, int *sock, struct sockaddr_in *master) {
             clockadj_step(CLOCK_REALTIME, -1*min_offset*0.4-total_offset*0.1);
         }
     }
+
     printf("Offset = %ldns\n", min_offset);
     printf("Delay = %ldns\n", min_delay);
-	printf("ms_diff = %ldns\n", min_ms);
+	  printf("ms_diff = %ldns\n", min_ms);
     printf("sm_diff = %ldns\n", min_sm);
     printf("Done!\n");
 }
-
 
 
 static void stats_poll()
 {
     int sock;
     struct sockaddr_in bind_addr;
-    
+    int buf_size = 32*1024;
+
     sock = socket(AF_INET, SOCK_DGRAM, 0);
-    
     if(unlikely(sock == -1)) {
         ERROR("ERROR creating socket!");
         exit(1);
     } else {
         printf("Socket created!\n");
     }
-    
-    /* set details for socket to bind */
+
     memset(&bind_addr, '\0', sizeof(bind_addr));
     bind_addr.sin_family = AF_INET;
     bind_addr.sin_addr.s_addr = INADDR_ANY;  
     bind_addr.sin_port = htons(PORT);
-
     int so_timestamping_flags =
     SOF_TIMESTAMPING_RX_SOFTWARE | SOF_TIMESTAMPING_TX_SOFTWARE |
     SOF_TIMESTAMPING_SOFTWARE | SOF_TIMESTAMPING_RX_HARDWARE |
-    SOF_TIMESTAMPING_TX_HARDWARE | SOF_TIMESTAMPING_RAW_HARDWARE |
-    // SOF_TIMESTAMPING_OPT_TSONLY |
-    0;
+    SOF_TIMESTAMPING_TX_HARDWARE | SOF_TIMESTAMPING_RAW_HARDWARE | 0;
     setsockopt(sock, SOL_SOCKET, SO_TIMESTAMPING, &so_timestamping_flags, sizeof(so_timestamping_flags));
-    int buf_size = 32*1024;
     setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (const char*)& buf_size, sizeof(int));
+
     if(unlikely(bind(sock, (struct sockaddr *) &bind_addr, sizeof(bind_addr)) < 0)) {
         close_socket(sock);
         ERROR("ERROR binding!\n");
@@ -192,7 +186,7 @@ static void stats_poll()
     }
     
     while(1) {
-        printf("\nReady to receive requests on port %d...\n", PORT);
+        printf("Ready to receive requests on port %d...\n", PORT);
         struct sockaddr_in addr = {0};
         char buffer[FIXED_BUFFER] = {0};
         receive_packet(&sock, buffer, FIXED_BUFFER, NULL, &addr);
@@ -213,6 +207,4 @@ int main(int argc, char *argv[])
 {
 	stats_poll();
 	return 0;
-
-
 }
