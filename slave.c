@@ -87,28 +87,37 @@ static void sync_clock(int times, int *sock, struct sockaddr_in *master) {
 	long delay, offset, ms, sm;
 	int time1[2];
 	get_time_real(time1);
-
+  send_packet(sock,"Running", FIXED_BUFFER, NULL, master);
 	
-    printf("Running IEEE1588 PTP...\n");
-	usleep(500);
+  printf("Running IEEE1588 PTP...\n");
 
 	long t1[times],t2[times],t3[times],t4[times];
 
 	for(i = 0; i < times; i++) {
 		t2[i] = udp_receive(*sock, useless_buffer, FIXED_BUFFER);
+    send_packet(sock,"OK", FIXED_BUFFER, NULL, master);
 	}
+
+  receive_packet(sock, useless_buffer, FIXED_BUFFER, NULL, NULL);
+
 	for(i = 0; i < times; i++) {
 		send_packet(sock,"delay", FIXED_BUFFER, NULL, master);
-        get_time_real(time1);
-        t3[i] = TO_NSEC(time1);
+    get_time_real(time1);
+    t3[i] = TO_NSEC(time1);
+    receive_packet(sock, useless_buffer, FIXED_BUFFER, NULL, NULL);
 	}
+  usleep(200);
+
+  send_packet(sock,"Continue", FIXED_BUFFER, NULL, master);
 
 	for(i = 0; i < times; i++) {
 		receive_packet(sock, t1+i, sizeof(time), NULL, NULL);
+    send_packet(sock,"OK", FIXED_BUFFER, NULL, master);
 	}
     
 	for(i = 0; i < times; i++) {
 		receive_packet(sock, t4+i, sizeof(time), NULL, NULL);
+    send_packet(sock,"OK", FIXED_BUFFER, NULL, master);
 	}
 
 	for(i = 0; i < times; i++) {
@@ -172,7 +181,8 @@ static void stats_poll()
     // SOF_TIMESTAMPING_OPT_TSONLY |
     0;
     setsockopt(sock, SOL_SOCKET, SO_TIMESTAMPING, &so_timestamping_flags, sizeof(so_timestamping_flags));
-    
+    int buf_size = 32*1024;
+    setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (const char*)& buf_size, sizeof(int));
     if(unlikely(bind(sock, (struct sockaddr *) &bind_addr, sizeof(bind_addr)) < 0)) {
         close_socket(sock);
         ERROR("ERROR binding!\n");
