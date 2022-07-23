@@ -133,7 +133,7 @@ static void sync_clock(int times, int *sock, struct sockaddr_in *master) {
 		}
 	}
 
-  if(min_delay > 10000 && min_delay < 40000 && ){
+  if(min_delay > 10000 && min_delay < 40000){
       if(abs(min_offset) > 20000){
           clockadj_step(CLOCK_REALTIME, -1*min_offset);
           total_offset = 0;
