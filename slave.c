@@ -133,22 +133,22 @@ static void sync_clock(int times, int *sock, struct sockaddr_in *master) {
 		}
 	}
 
-    if(min_delay > 10000 && min_delay < 40000){
-        if(abs(min_offset) > 20000){
-            clockadj_step(CLOCK_REALTIME, -1*min_offset);
-            total_offset = 0;
-        }
-        else{
-            total_offset = total_offset + min_offset;
-            clockadj_step(CLOCK_REALTIME, -1*min_offset*0.4-total_offset*0.1);
-        }
-    }
+  if(min_delay > 10000 && min_delay < 40000 && ){
+      if(abs(min_offset) > 20000){
+          clockadj_step(CLOCK_REALTIME, -1*min_offset);
+          total_offset = 0;
+      }
+      else{
+          total_offset = total_offset + min_offset;
+          clockadj_step(CLOCK_REALTIME, -1*min_offset*0.4-total_offset*0.1);
+      }
+  }
 
-    printf("Offset = %ldns\n", min_offset);
-    printf("Delay = %ldns\n", min_delay);
-	  printf("ms_diff = %ldns\n", min_ms);
-    printf("sm_diff = %ldns\n", min_sm);
-    printf("Done!\n");
+  printf("Offset = %ldns\n", min_offset);
+  printf("Delay = %ldns\n", min_delay);
+  printf("ms_diff = %ldns\n", min_ms);
+  printf("sm_diff = %ldns\n", min_sm);
+  printf("Done!\n");
 }
 
 
