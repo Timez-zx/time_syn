@@ -17,11 +17,11 @@ long long handle_scm_timestamping(struct scm_timestamping *ts) {
   return ts->ts[0].tv_sec*1000000000+ts->ts[0].tv_nsec;
 }
  
+
 long long handle_time(struct msghdr *msg) {
   long long timeT = 0;
-  for (struct cmsghdr *cmsg = CMSG_FIRSTHDR(msg); cmsg;
-       cmsg = CMSG_NXTHDR(msg, cmsg)) {
- 
+
+  for (struct cmsghdr *cmsg = CMSG_FIRSTHDR(msg); cmsg; cmsg = CMSG_NXTHDR(msg, cmsg)){
     if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_RECVERR) {
       struct sock_extended_err *ext =
           (struct sock_extended_err *)CMSG_DATA(cmsg);
@@ -42,12 +42,12 @@ long long handle_time(struct msghdr *msg) {
       timeT = handle_scm_timestamping(ts);
     } break;
     default:
-      /* Ignore other cmsg options */
       break;
     }
   }
   return timeT;
 }
+
 
 long long udp_receive(int sock, char *buf, size_t len) {
   char ctrl[2048];
@@ -62,47 +62,44 @@ long long udp_receive(int sock, char *buf, size_t len) {
                                       .msg_namelen = sizeof infor,
                                       .msg_iov = &iov,
                                       .msg_iovlen = 1};
+
   ssize_t recv_len = recvmsg(sock, &msg, 0);
- 
   if (recv_len < 0) {
     printf("Empty\n");
   }
- 
   long long timeT = handle_time(&msg);
- 
   return timeT;
 }
 
 static void sync_clock(int *sock, struct sockaddr_in *slave, int dev) {
 	int i; 
-    char useless_buffer[FIXED_BUFFER];
-    long time;
+  char useless_buffer[FIXED_BUFFER];
+  long time;
 	long long int buf[101]={0};
 	int time1[2], time2[2];
 	get_time_real(time1);
-    get_time_mono(time2);
+  get_time_mono(time2);
 	long diff = TO_NSEC(time1)-TO_NSEC(time2);
-
-    printf("Running IEEE1588 PTP %d times...\n", NUM_OF_TIMES);
+  printf("Running IEEE1588 PTP %d times...\n", NUM_OF_TIMES);
   receive_packet(sock, useless_buffer, FIXED_BUFFER, NULL, NULL);
 	long t1[NUM_OF_TIMES], t_drv[NUM_OF_TIMES];
 	long long int t_sf[NUM_OF_TIMES];
 
-    /* run protocol however many number of times */
 	for(i = 0; i < NUM_OF_TIMES; i++) {
 		send_packet(sock, "sync_packet", 11, NULL, slave);
-        get_time_real(time1);
-        t1[i] = TO_NSEC(time1);
+    get_time_real(time1);
+    t1[i] = TO_NSEC(time1);
     receive_packet(sock, useless_buffer, FIXED_BUFFER, NULL, NULL);
 	}
 
   send_packet(sock, "d_begin", 11, NULL, slave);
-
 	for(i = 0; i < NUM_OF_TIMES; i++) {
 		t_sf[i] = udp_receive(*sock, useless_buffer, FIXED_BUFFER);
     send_packet(sock,"OK", FIXED_BUFFER, NULL, slave);
 	}
+
   usleep(50);
+
   read(dev,buf,101);
   int receive_count = buf[100];
   for(i = NUM_OF_TIMES-1; i >= 0; i--) {
@@ -124,13 +121,14 @@ static void sync_clock(int *sock, struct sockaddr_in *slave, int dev) {
 		send_packet(sock, t1+i, sizeof(time), NULL, slave);
     receive_packet(sock, useless_buffer, FIXED_BUFFER, NULL, NULL);
 	}
-    usleep(10);
+
+  usleep(10);
+
 	for(i = 0; i < NUM_OF_TIMES; i++) {
 		send_packet(sock, t_drv+i, sizeof(time), NULL, slave);
     receive_packet(sock, useless_buffer, FIXED_BUFFER, NULL, NULL);
 	}
-
-    printf("Done!\n");
+  printf("Done!\n");
 }
 
 static void stats_poll()
@@ -138,17 +136,18 @@ static void stats_poll()
     int sock;
     struct sockaddr_in slave_addr = {0};
     int dev_hello;
+    int buf_size = 32*1024;
+
   	dev_hello = open("/dev/hellodev", O_RDONLY);
-	if(dev_hello<0)
-	{
-	  perror("open fail \n");
-	}
+    if(dev_hello<0)
+    {
+      perror("open fail \n");
+    }
 
     slave_addr.sin_family = AF_INET;
     slave_addr.sin_addr.s_addr = inet_addr(SLAVE_IP);  /* send to slave address */
     slave_addr.sin_port = htons(PORT);
     sock = socket(AF_INET, SOCK_DGRAM, 0);
-
     int so_timestamping_flags =
     SOF_TIMESTAMPING_RX_SOFTWARE | SOF_TIMESTAMPING_TX_SOFTWARE |
     SOF_TIMESTAMPING_SOFTWARE | SOF_TIMESTAMPING_RX_HARDWARE |
@@ -156,7 +155,6 @@ static void stats_poll()
     SOF_TIMESTAMPING_OPT_TSONLY |
     0;
     setsockopt(sock, SOL_SOCKET, SO_TIMESTAMPING, &so_timestamping_flags, sizeof(so_timestamping_flags));
-    int buf_size = 32*1024;
     setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (const char*)& buf_size, sizeof(int));
     if(unlikely(sock == -1)) {
         ERROR("ERROR creating socket!");
@@ -165,7 +163,6 @@ static void stats_poll()
         printf("Socket created!\n");
     }
     
-    /* sync time with slave */
     printf("Syncing time with %s:%d...\n\n", SLAVE_IP, PORT);
     char buffer[FIXED_BUFFER] = {0};
     while(1){
@@ -181,7 +178,6 @@ static void stats_poll()
 
 int main(int argc, char *argv[])
 {
-
 	stats_poll();
 	return 0;
 }

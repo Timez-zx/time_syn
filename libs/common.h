@@ -1,33 +1,23 @@
 #ifndef COMMON_IMPORTED
 #define COMMON_IMPORTED
+#include <stdio.h>
+#include <sys/time.h>
+#include <time.h>
+#include <unistd.h>
 
-/* default, printf, etc */
-#include<stdio.h>
-/* gettimeofday() */
-#include<sys/time.h>
-/* time structs */
-#include<time.h>
-/* close() */
-#include<unistd.h>
-
-/* USER-DEFINED SETTINGS */
 #define PORT 2468
 #define SLAVE_IP "169.254.100.100"
 #define NETMAP_INTERFACE "enp4s0"
 #define MASTER_IP "169.254.227.16"
 #define MASTER_INTERFACE "enp4s0"
-#define NUM_OF_TIMES 5 /* num of times to run protocol */
-
+#define NUM_OF_TIMES 5 
 #define FIXED_BUFFER 16
 #define HELLO "Hello World!"
-
 #ifndef likely /* For branch predictions */
     #define likely(x)   __builtin_expect(!!(x), 1)
     #define unlikely(x) __builtin_expect(!!(x), 0)
 #endif
-
 #define TO_NSEC(t) (((long)t[0] * 1000000000L) + t[1])
-
 #define ERROR(err)						        \
 	do {										\
 		char msg[128];							\
@@ -36,6 +26,7 @@
 		perror(msg);						 	\
 		printf("Exitting...\n");				\
         } while (0)
+
 
 void get_time_real(int in[2]) {
     if(in != NULL) {
@@ -53,6 +44,8 @@ void get_time_real(int in[2]) {
         #endif
     }
 }
+
+
 void get_time_mono(int in[2]) {
     if(in != NULL) {
         /* check for nanosecond resolution support */
