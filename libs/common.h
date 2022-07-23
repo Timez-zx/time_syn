@@ -13,7 +13,7 @@
 /* USER-DEFINED SETTINGS */
 #define PORT 2468
 #define SLAVE_IP "169.254.100.100"
-#define NETMAP_INTERFACE "eth0"
+#define NETMAP_INTERFACE "enp4s0"
 #define MASTER_IP "169.254.227.16"
 #define MASTER_INTERFACE "enp4s0"
 #define NUM_OF_TIMES 5 /* num of times to run protocol */

@@ -13,11 +13,7 @@
 #include "libs/stdnetwork.h"
 
 
-
-
-
 long long handle_scm_timestamping(struct scm_timestamping *ts) {
-
   return ts->ts[0].tv_sec*1000000000+ts->ts[0].tv_nsec;
 }
  
@@ -88,24 +84,25 @@ static void sync_clock(int *sock, struct sockaddr_in *slave, int dev) {
 	long diff = TO_NSEC(time1)-TO_NSEC(time2);
 
     printf("Running IEEE1588 PTP %d times...\n", NUM_OF_TIMES);
-
+  receive_packet(sock, useless_buffer, FIXED_BUFFER, NULL, NULL);
 	long t1[NUM_OF_TIMES], t_drv[NUM_OF_TIMES];
 	long long int t_sf[NUM_OF_TIMES];
-
 
     /* run protocol however many number of times */
 	for(i = 0; i < NUM_OF_TIMES; i++) {
 		send_packet(sock, "sync_packet", 11, NULL, slave);
         get_time_real(time1);
         t1[i] = TO_NSEC(time1);
-		usleep(5);
+    receive_packet(sock, useless_buffer, FIXED_BUFFER, NULL, NULL);
 	}
 
+  send_packet(sock, "d_begin", 11, NULL, slave);
 
 	for(i = 0; i < NUM_OF_TIMES; i++) {
 		t_sf[i] = udp_receive(*sock, useless_buffer, FIXED_BUFFER);
+    send_packet(sock,"OK", FIXED_BUFFER, NULL, slave);
 	}
-  usleep(2000);
+  usleep(50);
   read(dev,buf,101);
   int receive_count = buf[100];
   for(i = NUM_OF_TIMES-1; i >= 0; i--) {
@@ -122,15 +119,15 @@ static void sync_clock(int *sock, struct sockaddr_in *slave, int dev) {
 		printf("%lld\n",t_sf[i]-t_drv[i]);
 	}
 
+  receive_packet(sock, useless_buffer, FIXED_BUFFER, NULL, NULL);
 	for(i = 0; i < NUM_OF_TIMES; i++) {
 		send_packet(sock, t1+i, sizeof(time), NULL, slave);
-        usleep(1000);
+    receive_packet(sock, useless_buffer, FIXED_BUFFER, NULL, NULL);
 	}
     usleep(10);
 	for(i = 0; i < NUM_OF_TIMES; i++) {
 		send_packet(sock, t_drv+i, sizeof(time), NULL, slave);
-        usleep(1000);
-		
+    receive_packet(sock, useless_buffer, FIXED_BUFFER, NULL, NULL);
 	}
 
     printf("Done!\n");
@@ -159,7 +156,8 @@ static void stats_poll()
     SOF_TIMESTAMPING_OPT_TSONLY |
     0;
     setsockopt(sock, SOL_SOCKET, SO_TIMESTAMPING, &so_timestamping_flags, sizeof(so_timestamping_flags));
-    
+    int buf_size = 32*1024;
+    setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (const char*)& buf_size, sizeof(int));
     if(unlikely(sock == -1)) {
         ERROR("ERROR creating socket!");
         exit(1);
