@@ -89,13 +89,11 @@ static void sync_clock(int *sock, struct sockaddr_in *slave, int dev) {
 		send_packet(sock, "sync_packet", 11, NULL, slave);
     get_time_real(time1);
     t1[i] = TO_NSEC(time1);
-    receive_packet(sock, useless_buffer, FIXED_BUFFER, NULL, NULL);
 	}
+  
 
-  send_packet(sock, "d_begin", 11, NULL, slave);
 	for(i = 0; i < NUM_OF_TIMES; i++) {
 		t_sf[i] = udp_receive(*sock, useless_buffer, FIXED_BUFFER);
-    send_packet(sock,"OK", FIXED_BUFFER, NULL, slave);
 	}
 
   usleep(50);
@@ -116,13 +114,11 @@ static void sync_clock(int *sock, struct sockaddr_in *slave, int dev) {
 		printf("%lld\n",t_sf[i]-t_drv[i]);
 	}
 
-  receive_packet(sock, useless_buffer, FIXED_BUFFER, NULL, NULL);
 	for(i = 0; i < NUM_OF_TIMES; i++) {
 		send_packet(sock, t1+i, sizeof(time), NULL, slave);
     receive_packet(sock, useless_buffer, FIXED_BUFFER, NULL, NULL);
 	}
 
-  usleep(10);
 
 	for(i = 0; i < NUM_OF_TIMES; i++) {
 		send_packet(sock, t_drv+i, sizeof(time), NULL, slave);
@@ -149,11 +145,12 @@ static void stats_poll()
     slave_addr.sin_port = htons(PORT);
     sock = socket(AF_INET, SOCK_DGRAM, 0);
     int so_timestamping_flags =
-    SOF_TIMESTAMPING_RX_SOFTWARE | SOF_TIMESTAMPING_TX_SOFTWARE |
-    SOF_TIMESTAMPING_SOFTWARE | SOF_TIMESTAMPING_RX_HARDWARE |
-    SOF_TIMESTAMPING_TX_HARDWARE | SOF_TIMESTAMPING_RAW_HARDWARE |
-    SOF_TIMESTAMPING_OPT_TSONLY |
-    0;
+    SOF_TIMESTAMPING_RX_SOFTWARE |
+    SOF_TIMESTAMPING_SOFTWARE;
+    // SOF_TIMESTAMPING_SOFTWARE | SOF_TIMESTAMPING_RX_HARDWARE |
+    // SOF_TIMESTAMPING_TX_HARDWARE | SOF_TIMESTAMPING_RAW_HARDWARE |
+    // SOF_TIMESTAMPING_OPT_TSONLY |
+    // 0;
     setsockopt(sock, SOL_SOCKET, SO_TIMESTAMPING, &so_timestamping_flags, sizeof(so_timestamping_flags));
     setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (const char*)& buf_size, sizeof(int));
     if(unlikely(sock == -1)) {

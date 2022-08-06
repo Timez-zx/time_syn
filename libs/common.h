@@ -10,7 +10,7 @@
 #define NETMAP_INTERFACE "enp4s0"
 #define MASTER_IP "169.254.227.16"
 #define MASTER_INTERFACE "enp4s0"
-#define NUM_OF_TIMES 5 
+#define NUM_OF_TIMES 15
 #define FIXED_BUFFER 16
 #define HELLO "Hello World!"
 #ifndef likely /* For branch predictions */
