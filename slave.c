@@ -96,25 +96,19 @@ static void sync_clock(int times, int *sock, struct sockaddr_in *master) {
 
 	for(i = 0; i < times; i++) {
 		t2[i] = udp_receive(*sock, useless_buffer, FIXED_BUFFER);
-    send_packet(sock,"OK", FIXED_BUFFER, NULL, master);
 	}
 
-  receive_packet(sock, useless_buffer, FIXED_BUFFER, NULL, NULL);
+
 	for(i = 0; i < times; i++) {
 		send_packet(sock,"delay", FIXED_BUFFER, NULL, master);
     get_time_real(time1);
     t3[i] = TO_NSEC(time1);
-    receive_packet(sock, useless_buffer, FIXED_BUFFER, NULL, NULL);
 	}
 
-  usleep(200);
-
-  send_packet(sock,"Continue", FIXED_BUFFER, NULL, master);
 	for(i = 0; i < times; i++) {
 		receive_packet(sock, t1+i, sizeof(time), NULL, NULL);
     send_packet(sock,"OK", FIXED_BUFFER, NULL, master);
 	}
-    
 	for(i = 0; i < times; i++) {
 		receive_packet(sock, t4+i, sizeof(time), NULL, NULL);
     send_packet(sock,"OK", FIXED_BUFFER, NULL, master);
@@ -125,7 +119,7 @@ static void sync_clock(int times, int *sock, struct sockaddr_in *master) {
 		sm = t4[i]-t3[i];
 		delay = (ms+sm)/2;
 		offset = (ms-sm)/2;
-		if(abs(delay) < abs(min_delay) && delay > 0){
+		if(abs(offset) < abs(min_offset) && delay > 0){
 			min_delay = delay;
 			min_offset = offset;
 			min_sm = sm;
@@ -171,9 +165,10 @@ static void stats_poll()
     bind_addr.sin_addr.s_addr = INADDR_ANY;  
     bind_addr.sin_port = htons(PORT);
     int so_timestamping_flags =
-    SOF_TIMESTAMPING_RX_SOFTWARE | SOF_TIMESTAMPING_TX_SOFTWARE |
-    SOF_TIMESTAMPING_SOFTWARE | SOF_TIMESTAMPING_RX_HARDWARE |
-    SOF_TIMESTAMPING_TX_HARDWARE | SOF_TIMESTAMPING_RAW_HARDWARE | 0;
+    SOF_TIMESTAMPING_RX_SOFTWARE |
+    SOF_TIMESTAMPING_SOFTWARE;
+    //  | SOF_TIMESTAMPING_RX_HARDWARE |
+    // SOF_TIMESTAMPING_TX_HARDWARE | SOF_TIMESTAMPING_RAW_HARDWARE | 0;
     setsockopt(sock, SOL_SOCKET, SO_TIMESTAMPING, &so_timestamping_flags, sizeof(so_timestamping_flags));
     setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (const char*)& buf_size, sizeof(int));
 
